@@ -53,6 +53,8 @@ COPY bk-sp.sh /
 RUN chmod +x /bk-sp.sh
 RUN chmod +x -R /opt/bookkeeper/scripts/
 ENV BOOKIE_LOG_CONF=/opt/bookkeeper/conf/log4j.properties
+ENV BOOKIE_LOG_DIR=/opt/bookkeeper/logs
+ENV BOOKIE_ROOT_LOGGER=INFO,ROLLINGFILE
 ENTRYPOINT [ "/bin/bash", "/opt/bookkeeper/scripts/pravega_entrypoint.sh" ]
 CMD ["bookie"]
 
