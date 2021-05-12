@@ -46,12 +46,13 @@ RUN set -x \
 WORKDIR /opt/bookkeeper
 
 COPY entrypoint.sh /opt/bookkeeper/scripts/pravega_entrypoint.sh
-
+COPY log4j.properties /opt/bookkeeper/conf/log4j.properties
 # For backwards compatibility with older operator versions
 COPY entrypoint.sh /opt/bookkeeper/entrypoint.sh
-
+COPY bk-sp.sh /
+RUN chmod +x /bk-sp.sh
 RUN chmod +x -R /opt/bookkeeper/scripts/
-
+ENV BOOKIE_LOG_CONF=/opt/bookkeeper/conf/log4j.properties
 ENTRYPOINT [ "/bin/bash", "/opt/bookkeeper/scripts/pravega_entrypoint.sh" ]
 CMD ["bookie"]
 
