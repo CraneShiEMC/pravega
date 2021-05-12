@@ -17,20 +17,20 @@ package io.pravega.client;
 
 import com.google.common.annotations.Beta;
 import com.google.common.annotations.VisibleForTesting;
-import io.pravega.shared.security.auth.Credentials;
 import io.pravega.shared.metrics.MetricListener;
+import io.pravega.shared.security.auth.Credentials;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Data;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.Serializable;
 import java.net.URI;
 import java.util.Map;
 import java.util.Properties;
 import java.util.ServiceLoader;
 import java.util.stream.Collectors;
-
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Data;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * This class contains configuration that is passed on to Pravega client.
@@ -100,7 +100,7 @@ public class ClientConfig implements Serializable {
     /**
      * An internal property that determines whether TLS enabled is derived from Controller URI. It cannot be set
      * directly by the caller. It is interpreted as:
-     *
+     *Utils.java:308
      * false - if {@link #enableTlsToController} and/or {@link #enableTlsToSegmentStore} is/are set, and if either
      *         of them is set to false.
      * true - if neither {@link #enableTlsToController} or {@link #enableTlsToSegmentStore} are set, or if both are
