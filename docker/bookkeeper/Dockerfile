@@ -52,8 +52,6 @@ COPY entrypoint.sh /opt/bookkeeper/entrypoint.sh
 COPY bk-sp.sh /
 RUN chmod +x /bk-sp.sh
 RUN chmod +x -R /opt/bookkeeper/scripts/
-RUN chgrp -R 0 /bk && \
-    chmod -R g=u /bk
 RUN chgrp -R 0 /opt/bookkeeper && \
     chmod -R g=u /opt/bookkeeper
 ENV BOOKIE_LOG_CONF=/opt/bookkeeper/conf/log4j.properties
