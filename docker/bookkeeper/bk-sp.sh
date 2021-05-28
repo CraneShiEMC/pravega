@@ -1,6 +1,7 @@
 #!/bin/sh
 set -xe
 
+RECOEVER_LOG_PATH=/opt/bookkeeper/logs/recover.log
 usage() {
     cat <<EOF
 usage: ${0} [OPTIONS]
@@ -15,10 +16,10 @@ EOF
 precheck() {
 if curl "http://`hostname -i`:8080/api/v1/autorecovery/list_under_replicated_ledger" | grep -q "No under replicated ledgers found"
 then
-  echo "pass precheck!"
+  echo `date +%Y-%m-%d.%H:%M:%S`" pass precheck" >> $RECOEVER_LOG_PATH
 	exit 0
 else
-	echo "under_replicated_ledger not empty, precheck failed!"
+	echo `date +%Y-%m-%d.%H:%M:%S`" under_replicated_ledger not empty, precheck failed" >> $RECOEVER_LOG_PATH
 	exit 1
 fi
 }
@@ -26,10 +27,10 @@ fi
 postcheck() {
 if curl "http://`hostname -i`:8080/api/v1/autorecovery/list_under_replicated_ledger" | grep -q "No under replicated ledgers found"
 then
-  echo "pass postcheck!"
+  echo `date +%Y-%m-%d.%H:%M:%S`" pass postcheck" >> $RECOEVER_LOG_PATH
 	exit 0
 else
-	echo "under_replicated_ledger not empty, postcheck failed!"
+	echo `date +%Y-%m-%d.%H:%M:%S`" under_replicated_ledger not empty, postcheck failed" >> $RECOEVER_LOG_PATH
 	exit 1
 fi
 }
@@ -38,21 +39,22 @@ fi
 recovery() {
 if curl "http://`hostname -i`:8080/api/v1/autorecovery/list_under_replicated_ledger" | grep -q "No under replicated ledgers found"
 then
-	if timeout ${timeout_seconds}s /opt/bookkeeper/bin/bookkeeper shell recover `hostname -i`:3181 -f |tee /opt/bookkeeper/logs/recover_`date +%s`.log| grep  -q "OK: No problem"
+	timeout ${timeout_seconds}s /opt/bookkeeper/bin/bookkeeper shell recover `hostname -i`:3181 -f >> $RECOEVER_LOG_PATH
+	if grep "OK: No problem" /opt/bookkeeper/logs/bookkeeper-server.log | grep -q `date +%Y-%m-%d.%H`
 	then
-	  echo "recovery succeeded!"
+	  echo `date +%Y-%m-%d.%H:%M:%S`" recovery succeeded" >> $RECOEVER_LOG_PATH
 	  exit 0
 	else
-		echo "recovery failed!"
+		echo `date +%Y-%m-%d.%H:%M:%S`" recovery failed" >> $RECOEVER_LOG_PATH
 		exit 1
 	fi
 else
-	echo "under_replicated_ledger not empty, recovery failed!"
+	echo `date +%Y-%m-%d.%H:%M:%S`" under_replicated_ledger not empty, recovery failed" >> $RECOEVER_LOG_PATH
 	exit 1
 fi
 }
 
-while [[ $# -gt 0 ]]; do
+while [ $# -gt 0 ]; do
     case ${1} in
         -t|--type)
             type="$2"
