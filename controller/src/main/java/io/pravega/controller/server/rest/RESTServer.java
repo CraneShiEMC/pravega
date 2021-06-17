@@ -16,6 +16,7 @@
 package io.pravega.controller.server.rest;
 
 import com.google.common.util.concurrent.AbstractIdleService;
+import io.pravega.client.ClientConfig;
 import io.pravega.client.connection.impl.ConnectionFactory;
 import io.pravega.common.LoggerHelpers;
 import io.pravega.common.security.JKSHelper;
@@ -51,7 +52,9 @@ public class RESTServer extends AbstractIdleService {
     private final ResourceConfig resourceConfig;
     private HttpServer httpServer;
 
-    public RESTServer(LocalController localController, ControllerService controllerService, AuthHandlerManager pravegaAuthManager, RESTServerConfig restServerConfig, ConnectionFactory connectionFactory) {
+    public RESTServer(LocalController localController, ControllerService controllerService,
+                      AuthHandlerManager pravegaAuthManager, RESTServerConfig restServerConfig,
+                      ConnectionFactory connectionFactory, ClientConfig clientConfig) {
         this.objectId = "RESTServer";
         this.restServerConfig = restServerConfig;
         final String serverURI = "http://" + restServerConfig.getHost();
@@ -59,7 +62,8 @@ public class RESTServer extends AbstractIdleService {
 
         final Set<Object> resourceObjs = new HashSet<>();
         resourceObjs.add(new PingImpl());
-        resourceObjs.add(new StreamMetadataResourceImpl(localController, controllerService, pravegaAuthManager, connectionFactory));
+        resourceObjs.add(new StreamMetadataResourceImpl(localController, controllerService, pravegaAuthManager,
+                connectionFactory, clientConfig));
 
         final ControllerApplication controllerApplication = new ControllerApplication(resourceObjs);
         this.resourceConfig = ResourceConfig.forApplication(controllerApplication);
