@@ -25,6 +25,7 @@ fi
 }
 
 postcheck() {
+recoveryinternal
 if curl "http://`hostname -i`:8080/api/v1/autorecovery/list_under_replicated_ledger" | grep -q "No under replicated ledgers found"
 then
   echo `date +%Y-%m-%d.%H:%M:%S`" pass postcheck" >> $RECOEVER_LOG_PATH
@@ -51,6 +52,17 @@ then
 else
 	echo `date +%Y-%m-%d.%H:%M:%S`" under_replicated_ledger not empty, recovery failed" >> $RECOEVER_LOG_PATH
 	exit 1
+fi
+}
+
+recoveryinternal() {
+timeout ${timeout_seconds}s /opt/bookkeeper/bin/bookkeeper shell recover `hostname -i`:3181 -f >> $RECOEVER_LOG_PATH
+if grep "OK: No problem" /opt/bookkeeper/logs/bookkeeper-server.log | grep -q `date +%Y-%m-%d.%H`
+then
+  echo `date +%Y-%m-%d.%H:%M:%S`" recovery succeeded" >> $RECOEVER_LOG_PATH
+else
+  echo `date +%Y-%m-%d.%H:%M:%S`" recovery failed" >> $RECOEVER_LOG_PATH
+  exit 1
 fi
 }
 
