@@ -25,8 +25,6 @@ import org.junit.Test;
 import io.pravega.shared.health.TestHealthContributors.HealthyContributor;
 import io.pravega.shared.health.TestHealthContributors.FailingContributor;
 
-import io.pravega.test.common.AssertExtensions;
-
 import java.time.Duration;
 
 @Slf4j
@@ -34,48 +32,37 @@ public class HealthServiceUpdaterTests {
 
     HealthServiceManager service;
 
-    HealthServiceUpdater healthServiceUpdater;
-
     @Before
     public void before() {
-        service = new HealthServiceManager(Duration.ofSeconds(1));
-        service.getHealthServiceUpdater().startAsync();
-        healthServiceUpdater = service.getHealthServiceUpdater();
-        healthServiceUpdater.awaitRunning();
+        service = new HealthServiceManager(Duration.ofMillis(100));
+        service.start();
     }
 
     @After
     public void after() {
         service.close();
-        healthServiceUpdater.stopAsync();
-        healthServiceUpdater.awaitTerminated();
-    }
-
-    @Test
-    public void testIsRunningAfterServiceInitialization() {
-        Assert.assertTrue(healthServiceUpdater.isRunning());
     }
 
     @Test
     public void testServiceUpdaterProperlyUpdates() throws Exception {
         @Cleanup
         HealthContributor contributor = new HealthyContributor("contributor");
-        service.getRoot().register(contributor);
-        // First Update.
-        assertHealthServiceStatus(Status.UP);
+        service.register(contributor);
+
+        TestHealthContributors.awaitHealthContributor(service, service.getName());
+        Health health = service.getEndpoint().getHealth();
+        Assert.assertEquals(Status.UP, health.getStatus());
         contributor.close();
+
         Assert.assertEquals("Closed contributor should no longer be listed as a child.",
                 0,
-                service.getRoot().getHealthSnapshot().getChildren().size());
+                service.getHealthSnapshot().getChildren().size());
         // We register an indicator that will return a failing result, so the next health check should contain a 'DOWN' Status.
         contributor = new FailingContributor("failing");
-        service.getRoot().register(contributor);
+        service.register(contributor);
+        TestHealthContributors.awaitHealthContributor(service, contributor.getName());
 
-        assertHealthServiceStatus(Status.DOWN);
-    }
-
-    private void assertHealthServiceStatus(Status expected) throws Exception {
-            AssertExtensions.assertEventuallyEquals(expected,
-                    () -> healthServiceUpdater.getLatestHealth().getStatus(), healthServiceUpdater.getInterval().toMillis() + 1);
+        health = service.getEndpoint().getHealth();
+        Assert.assertEquals(Status.DOWN, health.getStatus());
     }
 }

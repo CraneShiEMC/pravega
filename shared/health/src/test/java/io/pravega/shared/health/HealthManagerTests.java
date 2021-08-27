@@ -15,7 +15,7 @@
  */
 package io.pravega.shared.health;
 
-import io.pravega.test.common.TestUtils;
+import io.pravega.test.common.AssertExtensions;
 import lombok.Cleanup;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.After;
@@ -32,6 +32,8 @@ import org.junit.rules.Timeout;
 
 import io.pravega.shared.health.TestHealthContributors.HealthyContributor;
 
+import static io.pravega.shared.health.TestHealthContributors.awaitHealthContributor;
+
 /**
  * The {@link HealthManagerTests} encapsulates much of the same processes that {@link HealthEndpoint} performs, so
  * an explicit test class for the former is skipped.
@@ -46,15 +48,12 @@ public class HealthManagerTests {
 
     @Before
     public void before() {
-        service = new HealthServiceManager(Duration.ofSeconds(1));
-        service.getHealthServiceUpdater().startAsync();
-        service.getHealthServiceUpdater().awaitRunning();
+        service = new HealthServiceManager(Duration.ofMillis(100));
+        service.start();
     }
 
     @After
     public void after() {
-        service.getHealthServiceUpdater().stopAsync();
-        service.getHealthServiceUpdater().awaitTerminated();
         service.close();
     }
 
@@ -66,7 +65,7 @@ public class HealthManagerTests {
     public void testHealth() throws Exception {
         @Cleanup
         HealthyContributor contributor = new HealthyContributor();
-        service.getRoot().register(contributor);
+        service.register(contributor);
 
         awaitHealthContributor(service, contributor.getName());
         Assert.assertNotNull(service.getEndpoint().getHealth(contributor.getName()));
@@ -80,20 +79,20 @@ public class HealthManagerTests {
      */
     @Test
     public void testHealthInvalidName() {
-        Assert.assertNull("An exception should be thrown given an unregistered contributor.",
-                service.getEndpoint().getHealth("unknown-contributor-name"));
+        AssertExtensions.assertThrows("An exception should be thrown given an unregistered contributor.",
+                () -> TestHealthContributors.awaitHealthContributor(service, "unknown-contributor-name"),
+                e -> e instanceof TimeoutException);
     }
 
     /**
      * Tests that when specified a {@link Health} result will return any details information belonging to that
      * {@link HealthContributor} or it's dependencies.
-     *
      */
     @Test
     public void testDetailsEndpoints() throws TimeoutException {
         @Cleanup
         HealthyContributor contributor = new HealthyContributor("contributor");
-        service.getRoot().register(contributor);
+        service.register(contributor);
 
         // Wait for the health result to be picked up by the HealthServiceUpdater.
         awaitHealthContributor(service, contributor.getName());
@@ -128,7 +127,7 @@ public class HealthManagerTests {
     public void testStatusEndpoints() throws Exception {
         @Cleanup
         HealthyContributor contributor = new HealthyContributor("contributor");
-        service.getRoot().register(contributor);
+        service.register(contributor);
 
         awaitHealthContributor(service, contributor.getName());
         // Test the 'service level' endpoint.
@@ -144,7 +143,7 @@ public class HealthManagerTests {
     public void testLivenessEndpoints() throws Exception {
         @Cleanup
         HealthyContributor contributor = new HealthyContributor("contributor");
-        service.getRoot().register(contributor);
+        service.register(contributor);
 
         awaitHealthContributor(service, contributor.getName());
         Assert.assertEquals("The HealthServiceManager should produce an 'alive' result.",
@@ -161,7 +160,7 @@ public class HealthManagerTests {
     public void testReadinessEndpoints() throws TimeoutException {
         @Cleanup
         HealthyContributor contributor = new HealthyContributor("contributor");
-        service.getRoot().register(contributor);
+        service.register(contributor);
         // Wait for the HealthServiceUpdater to update the Health state.
         awaitHealthContributor(service, contributor.getName());
 
@@ -171,9 +170,4 @@ public class HealthManagerTests {
         Assert.assertEquals("The SampleIndicator should produce a 'ready' result.", true, ready);
     }
 
-    public static void awaitHealthContributor(HealthServiceManager service, String id) throws TimeoutException {
-        TestUtils.await(() -> service.getEndpoint().getHealth(id) != null,
-                (int) service.getHealthServiceUpdater().getInterval().toMillis(),
-                service.getHealthServiceUpdater().getInterval().toMillis() * 3);
-    }
 }
